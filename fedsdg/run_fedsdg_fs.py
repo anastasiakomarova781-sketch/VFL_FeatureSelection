@@ -27,8 +27,8 @@ from fedsdg_fs_article import (
 # ЭТАП 1. Загрузка данных
 # ============================================================
 print("Загрузка данных...")
-active_df = pd.read_csv("Data/active_dataset_test.csv")
-passive_df = pd.read_csv("Data/passive_dataset_test.csv")
+active_df = pd.read_csv("../Data/active_dataset_test.csv")
+passive_df = pd.read_csv("../Data/passive_dataset_test.csv")
 print(f"  Активный: {active_df.shape}, Пассивный: {passive_df.shape}")
 
 if USE_SAMPLE:
@@ -137,11 +137,11 @@ else:
 # ЭТАП 8. Сохранение отфильтрованных датасетов
 # ============================================================
 active_selected_df = active_df[["id", "target"] + selected["active"]]
-active_selected_df.to_csv("Data/active_dataset_selected.csv", index=False)
+active_selected_df.to_csv("../Data/active_dataset_selected.csv", index=False)
 
 passive_selected_df = passive_df[["id"] + selected["passive"]]
-passive_selected_df.to_csv("Data/passive_dataset_selected.csv", index=False)
+passive_selected_df.to_csv("../Data/passive_dataset_selected.csv", index=False)
 
 print("\nСохранено:")
-print(" - Data/active_dataset_selected.csv")
-print(" - Data/passive_dataset_selected.csv")
+print(" - ../Data/active_dataset_selected.csv")
+print(" - ../Data/passive_dataset_selected.csv")
