@@ -1,0 +1,68 @@
+key: DI
+other:
+  clean-working-dir: true
+  all-other-apps:
+    custom:
+      auto: {}
+      clover:
+        useLocalLicenseKey: 'true'
+        path: coverage/clover.xml
+        integration: custom
+        exists: 'false'
+      buildHangingConfig.enabled: 'false'
+tasks:
+- checkout:
+    repository: vfl
+    force-clean-build: 'true'
+    description: Checkout to repository
+- script:
+    interpreter: SHELL
+    scripts:
+    - |-
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      export VERSION="$(git rev-parse --short HEAD)"
+      export IMAGE="vfl"
+      export IMAGE_WITH_TAG="$IMAGE:$VERSION"
+
+      docker build --progress=plain -f docker/runtime.docker -t ${bamboo.nexusHost}/conf-compute/${IMAGE}:latest .
+
+      # Сохранение переменных в bamboo контексте для дальнейшего использования
+      echo "IMAGE_NAME=$IMAGE" | tee inject.variable
+      echo "IMAGE_TAG=$IMAGE:$VERSION" | tee -a inject.variable
+      echo "IMAGE_VERSION=$VERSION" | tee -a inject.variable
+    description: Build docker image
+
+- inject-variables:
+      file: inject.variable
+      scope: LOCAL
+      namespace: inject
+      description: Inject variable
+
+- script:
+    interpreter: SHELL
+    scripts:
+      - |-
+        #!/usr/bin/env bash
+        # Exit, когда команда не выполняется
+        set -euo pipefail
+
+        # Изменение тега собранного образа для загрузки в docker registry
+        docker tag ${bamboo.nexusHost}/conf-compute/${bamboo.inject.IMAGE_NAME}:latest ${bamboo.nexusHost}/conf-compute/${bamboo.inject.IMAGE_TAG}
+
+        # Авторизация в docker registry
+        # docker login ${bamboo.nexusHost} -u ${bamboo.nexusDockerUser} --password ${bamboo.nexusDockerPassword}
+
+        # Пуш образа в docker registry
+        docker push ${bamboo.nexusHost}/conf-compute/${bamboo.inject.IMAGE_TAG}
+        docker push ${bamboo.nexusHost}/conf-compute/${bamboo.inject.IMAGE_NAME}:latest
+        echo ${bamboo.inject.IMAGE_TAG} > artifact.version
+artifacts:
+  - name: Docker version
+    pattern: artifact.version
+    shared: true
+    required: true
+requirements:
+- dc
+artifact-subscriptions: []

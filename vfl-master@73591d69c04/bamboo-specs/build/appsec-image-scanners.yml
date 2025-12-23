@@ -1,0 +1,52 @@
+other:
+  clean-working-dir: true
+  all-other-apps:
+    custom:
+      auto: {}
+      buildHangingConfig:
+        minutesBetweenLogs: 20
+        minutesQueueTimeout: 20
+        multiplier: 999
+        enabled: true
+tasks:
+  - checkout:
+      repository: scanner
+      path: scanner
+      force-clean-build: false
+  - script:
+      interpreter: SHELL
+      scripts:
+      - |-
+        echo '
+        {
+            "CS": true,
+            "engagement_id": "'$(cat dd_eng_ids)'",
+            "settings": {
+                "CS":{
+                    "trivy": {
+                        "jdb": true
+                    }
+                }
+            }
+        }
+        ' > config_file
+      description: config
+  - script:
+      interpreter: SHELL
+      scripts:
+      - echo ${bamboo.office_repo}/conf-compute/$(cat artifact.version) > images_file
+      description: images
+  - script:
+      interpreter: SHELL
+      scripts:
+      - scanner/scan.sh
+      description: scan
+artifacts:
+  - name: .reports2
+    location: .reports
+    pattern: '**/*'
+    shared: false
+    required: true
+artifact-subscriptions:
+  - artifact: dd_eng_ids
+  - artifact: Docker version

@@ -1,0 +1,3 @@
+[submodule "external/ucbfl"]
+	path = external/ucbfl
+	url = ssh://git@git.ucb.local:7999/cc/ucbfl.git

@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+import "proto/common_vfl.proto";
+
+package vfl;
+
+service DatasetLoading {
+  rpc UploadActiveDataset(UploadDatasetRequest) returns (WorkResponse);
+  rpc UploadPassiveDataset(UploadDatasetRequest) returns (WorkResponse);
+}
+
+service Training {
+  rpc StartTraining(StartTrainingRequest) returns (WorkResponse);
+}
+
+service Prediction {
+    rpc StartPredict(StartPredictRequest) returns (WorkResponse);
+}
+
+message StartTrainingRequest {
+  TrainingRequest active_request = 1;
+  TrainingRequest passive_request = 2;
+}
+
+message StartPredictRequest {
+  PredictRequest active_request = 1;
+  PredictRequest passive_request = 2;
+}

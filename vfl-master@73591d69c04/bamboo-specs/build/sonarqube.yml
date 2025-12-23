@@ -1,0 +1,36 @@
+key: SON
+other:
+  clean-working-dir: true
+  all-other-apps:
+    custom:
+      auto: {}
+      buildHangingConfig.enabled: 'false'
+tasks:
+- checkout:
+    repository: vfl
+    force-clean-build: 'true'
+- artifact-download:
+    artifacts:
+    - destination: .reports
+      name: coverage.out
+    - destination: .reports
+      name: golangci-lint.xml
+- any-task:
+    plugin-key: ch.mibex.bamboo.sonar4bamboo:sonar4bamboo.sonarscannertask
+    configuration:
+      chosenSonarConfigId: '1'
+      sonarServerSelection: fromServerConfig
+      sonarMainBranch: master
+      buildJdk: JDK
+      brokenQualityGateOption: break-build
+      overrideSonarLoginVariable: appsec_codescoring_api_token_secret
+      incrementalNoPullRequest: incrementalModeFailBuildField
+      failBuildForSonarErrors: 'true'
+      executable: Sonar scanner
+      illegalBranchCharsReplacement: '-'
+      sonarEditionSelection: COMMERCIAL_EDITION
+      failBuildForTaskErrors: 'true'
+      incrementalModeNotPossible: incrementalModeRunFullAnalysis
+      additionalProperties: -Dsonar.setting=sonar-project.properties
+      autoBranch: 'true'
+artifact-subscriptions: []

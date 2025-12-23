@@ -1,0 +1,11 @@
+config_dir: "config"
+datasets_dir: "datasets"
+models_dir: "models"
+predict_dir: "predict"
+rabbitmq:
+  route_file: "rabbitmq_route_table.yaml"
+  host: "localhost"
+  port: 5672
+  port2: 15672
+  user: "rabbitmq_admin"
+  max_message_size: 10485760

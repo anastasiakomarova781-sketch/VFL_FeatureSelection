@@ -1,0 +1,114 @@
+title Вертикальное Федеративное  обучение: процесс тренировки
+
+# Участники
+participant "GuestApp: do_train()" as GuestApp
+participant "HeteroSecureBoostGuest" as SecureBoostGuest
+participant "HeteroDecisionTreeGuest" as TreeGuest
+participant "SBTSplitter" as Splitter
+participant "RabbitMQ" as RabbitMQ
+participant "HeteroDecisionTreeHost" as TreeHost
+participant "HeteroSecureBoostHost" as SecureBoostHost
+participant "DistributedHistogram" as DistHist
+participant "HistogramBuilder" as HBuilder
+participant "SBTHistogramBuilder" as HistBuilder
+
+# Процесс обучения
+GuestApp -> SecureBoostGuest: fit(ctx, data_frame)
+note right of SecureBoostGuest: 1. Биннинг данных\n2. Инициализация градиентов\n3. Создание деревьев
+
+== Инициализация на Host ==
+SecureBoostGuest -> RabbitMQ: [инициализация обучения]
+RabbitMQ -> SecureBoostHost: [начало обучения]
+note right of SecureBoostHost: 1. Получение данных\n2. Инициализация деревьев\n3. Подготовка к обучению
+
+SecureBoostHost -> TreeHost: booster_fit(bin_data, binning_dict)
+note right of TreeHost: Ожидание зашифрованных данных\nи крипто-инструментов
+
+SecureBoostGuest -> TreeGuest: booster_fit(bin_data, grad_and_hess, binning_dict)
+note right of TreeGuest: Запуск построения дерева решения
+
+== Шифрование и передача данных ==
+TreeGuest -> TreeGuest: _g_h_process(grad_and_hess)
+note left of TreeGuest: Шифрование градиентов:\n- Упаковка g/h в вектор\n- Paillier-шифрование\n- Настройка смещения (g_offset)\n- Фиксированная точка (shift_bit)
+
+TreeGuest -> RabbitMQ: PUT en_gh (зашифрованные градиенты/гессианы)
+TreeGuest -> RabbitMQ: PUT en_kit (pk, evaluator)
+TreeGuest -> RabbitMQ: PUT pack_info (total_pack_num, split_point_shift_bit)
+
+RabbitMQ -> TreeHost: [en_gh, en_kit, pack_info]
+note right of TreeHost: Получение крипто-инструментов\nи зашифрованных производных
+
+loop Для каждого уровня глубины (depth = 0 → max_depth)
+    == Фаза 1: Вычисление гистограмм ==
+    TreeHost -> HistBuilder: compute_hist(ctx, nodes, bin_train_data, en_gh)
+    note right of HistBuilder: Создание схемы шифрования\nна основе en_kit
+    
+    HistBuilder -> HBuilder: statistic(data)
+    note right of HBuilder: Гомоморфная агрегация:\n- mapReducePartitions\n- iadd зашифрованных значений
+    
+    HBuilder -> DistHist: Создание объекта
+    DistHist --> TreeHost: Гистограмма
+    note right of DistHist: Зашифрованные суммы:\n- g (градиенты)\n- h (гессианы)\n- cnt (количество)
+    
+    TreeHost -> RabbitMQ: PUT DistHist (зашифрованные гистограммы)
+    RabbitMQ -> TreeGuest: [DistHist]
+    note left of TreeGuest: Получение агрегированных статистик\nпо признакам Host
+    
+    == Фаза 2: Поиск лучшего разделения ==
+    TreeGuest -> Splitter: split(ctx, DistHist, ...)
+    note left of Splitter: 1. Дешифровка гистограмм (sk)\n2. _compute_gains() на зашифр. данных\n3. Выбор max gain\n4. Проверка min_impurity_split
+    
+    Splitter -> DistHist: decrypt(sk_map, coder_map)
+    note left of DistHist: Расшифровка только на Guest\nс использованием приватного ключа
+    
+    DistHist --> Splitter: Расшифрованные гистограммы
+    Splitter --> TreeGuest: Лучшие split_info
+    
+    == Фаза 3: Синхронизация узлов ==
+    TreeGuest -> TreeGuest: _sync_nodes(cur_nodes, next_nodes)
+    note left of TreeGuest: Маскировка чувствительной информации:\n- split_id → fid/bid\n- sitename\n- gain
+    
+    TreeGuest -> RabbitMQ: PUT sync_nodes
+    RabbitMQ -> TreeHost: [sync_nodes]
+    note right of TreeHost: Получение структуры дерева\nбез деталей сплитов
+    
+    TreeHost -> SecureBoostHost: [обновление состояния дерева]
+    note right of SecureBoostHost: Обновление внутреннего состояния
+    
+    == Фаза 4: Обновление позиций образцов ==
+    TreeGuest -> TreeGuest: _update_sample_pos(..., local_update=False)
+    note left of TreeGuest: Частичное обновление позиций\nна локальных данных
+    
+    TreeGuest -> RabbitMQ: PUT updated_data
+    RabbitMQ -> TreeHost: [updated_data]
+    
+    TreeHost -> TreeHost: _update_sample_pos(..., node_map)
+    note right of TreeHost: Обновление позиций\nна основе локальных правил
+    
+    TreeHost -> RabbitMQ: PUT updated_data
+    RabbitMQ -> TreeGuest: [updated_data]
+    
+    TreeGuest -> TreeGuest: _merge_sample_positions()
+    note left of TreeGuest: Объединение позиций от всех участников
+    
+    TreeGuest -> RabbitMQ: PUT new_sample_pos
+    RabbitMQ -> TreeHost: [new_sample_pos]
+    note right of TreeHost: Финальные позиции образцов\nдля следующего уровня
+    
+    TreeHost -> SecureBoostHost: [прогресс обучения]
+    note right of SecureBoostHost: Обновление метрик\nи состояния обучения
+end
+
+== Финализация на Host ==
+TreeHost -> SecureBoostHost: [финальное состояние дерева]
+note right of SecureBoostHost: 1. Обновление feature_importance\n2. Финализация модели
+
+TreeGuest -> SecureBoostGuest: [обученное дерево]
+note left of TreeGuest: - Веса листьев\n- Информация о разделениях\n- Важность признаков
+
+SecureBoostGuest -> GuestApp: get_model()
+GuestApp -> GuestApp: save_model(output_model_path)
+note left of GuestApp: Сериализация через pickle
+
+SecureBoostHost -> SecureBoostHost: save_model()
+note right of SecureBoostHost: Сохранение модели на Host

@@ -1,0 +1,20 @@
+---
+version: 2
+plan:
+  key: CC-VFL
+plan-permissions:
+- users:
+  - dkhomich
+  - NSergeev
+  - aaksenov
+  permissions:
+  - view
+  - edit
+  - build
+  - clone
+  - admin
+- roles:
+  - logged-in
+  permissions:
+  - view
+  - build

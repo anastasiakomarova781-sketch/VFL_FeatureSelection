@@ -1,0 +1,51 @@
+title Процесс предсказания в вертикальном федеративном обучении
+
+participant GuestApplication
+participant HeteroSecureBoostGuest
+participant predict_leaf_guest
+participant RabbitMQ
+participant HostApplication
+participant HeteroSecureBoostHost
+participant predict_leaf_host
+
+note left of GuestApplication: Запуск процесса предсказания
+GuestApplication->HeteroSecureBoostGuest: predict(ctx, data)
+activate HeteroSecureBoostGuest
+HeteroSecureBoostGuest->predict_leaf_guest: Вызов (ctx, trees, data)
+activate predict_leaf_guest
+
+predict_leaf_guest->predict_leaf_guest: Инициализация sample_pos = [0,0,...]
+predict_leaf_guest->predict_leaf_guest: predict_data = data
+
+loop Пока не все образцы достигли листьев
+    predict_leaf_guest->predict_leaf_guest: traverse_tree() для Guest-узлов
+    
+    break Все образцы в листьях
+        predict_leaf_guest->RabbitMQ: Отправка need_stop = True
+        RabbitMQ->HostApplication: Доправка need_stop
+        HostApplication->HeteroSecureBoostHost: Сигнал need_stop
+    end
+    
+    predict_leaf_guest->RabbitMQ: Отправка pending_samples
+    RabbitMQ->HostApplication: Доставка pending_samples
+    HostApplication->HeteroSecureBoostHost: Вызов predict()
+    activate HeteroSecureBoostHost
+    HeteroSecureBoostHost->predict_leaf_host: predict_leaf_host(ctx, trees, data)
+    activate predict_leaf_host
+    predict_leaf_host->predict_leaf_host: traverse_tree() для Host-узлов
+    predict_leaf_host->HeteroSecureBoostHost: Возврат updated_pos
+    deactivate predict_leaf_host
+    HeteroSecureBoostHost->RabbitMQ: Отправка updated_pos
+    deactivate HeteroSecureBoostHost
+    RabbitMQ->GuestApplication: Доставка updated_pos
+    GuestApplication->predict_leaf_guest: Передача updated_pos
+    predict_leaf_guest->predict_leaf_guest: _merge_pos(pending_samples, updated_pos)
+    predict_leaf_guest->predict_leaf_guest: comm_round += 1
+end
+
+predict_leaf_guest->HeteroSecureBoostGuest: Возврат leaf_pos
+deactivate predict_leaf_guest
+HeteroSecureBoostGuest->HeteroSecureBoostGuest: _sum_leaf_weights()
+HeteroSecureBoostGuest->HeteroSecureBoostGuest: loss_func.predict()
+HeteroSecureBoostGuest->GuestApplication: Возврат результатов
+deactivate HeteroSecureBoostGuest

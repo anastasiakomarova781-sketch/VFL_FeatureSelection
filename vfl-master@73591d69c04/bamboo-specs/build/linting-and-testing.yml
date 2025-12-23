@@ -1,0 +1,48 @@
+key: TL
+other:
+  clean-working-dir: true
+  all-other-apps:
+    custom:
+      auto: {}
+      clover:
+        useLocalLicenseKey: 'true'
+        path: .reports/coverage/cobertura.xml
+        integration: custom
+        exists: 'false'
+      buildHangingConfig.enabled: 'false'
+tasks:
+- checkout:
+    repository: vfl
+    force-clean-build: 'true'
+    description: Checkout Default Repository
+- script:
+    interpreter: SHELL
+    scripts:
+    - |-
+      echo "Will add later"
+    description: Run ci lint
+- script:
+    interpreter: SHELL
+    scripts:
+    - |-
+      echo "Will add later"
+    description: Run tests
+artifacts:
+- name: golangci-lint.xml
+  location: .reports/
+  pattern: golangci-lint.xml
+  shared: true
+  required: false
+- name: coverage.out
+  location: .reports/
+  pattern: coverage.out
+  shared: true
+  required: false
+- name: coverage.html
+  location: .reports/
+  pattern: coverage.html
+  shared: true
+  required: false
+requirements:
+- dc
+artifact-subscriptions: []

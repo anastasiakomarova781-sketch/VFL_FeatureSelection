@@ -1,0 +1,56 @@
+key: APS
+other:
+  clean-working-dir: true
+  all-other-apps:
+    custom:
+      auto: {}
+      buildHangingConfig:
+        minutesBetweenLogs: 20
+        minutesQueueTimeout: 20
+        multiplier: 999
+        enabled: true
+tasks:
+  - checkout:
+      repository: scanner
+      path: scanner
+      force-clean-build: false
+  - script:
+      interpreter: SHELL
+      scripts:
+      - |-
+        echo '
+        {
+            "language": "Golang",
+            "repos": [1],
+            "SAST": true,
+            "SCA": true,
+            "IaC": true,
+            "Secrets": true,
+            "settings":{
+                "IaC": {
+                    "checkov": {
+                        "cmd": "-s --compact --quiet -d =REPO[1]=/deployments --skip-framework openapi"
+                    },
+                    "kics": {"cmd": "--ci --ignore-on-exit results --exclude-paths \"**/.git/*,**/vendor/*\" --exclude-type OpenAPI"}
+                }
+            }
+        }
+        ' > config_file
+      description: config
+  - script:
+      interpreter: SHELL
+      scripts:
+      - scanner/scan.sh
+      description: scan
+artifacts:
+  - name: .reports
+    location: .reports
+    pattern: '**/*'
+    shared: true
+    required: true
+  - name: dd_eng_ids
+    location: .reports
+    pattern: dd_eng_ids
+    shared: true
+    required: true
+artifact-subscriptions: []

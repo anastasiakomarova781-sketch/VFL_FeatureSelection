@@ -1,0 +1,74 @@
+---
+version: 2
+plan:
+  project-key: CC
+  key: VFL
+  name: vfl
+  description: VFL
+
+stages:
+- AppSec Source Scanners:
+    manual: false
+    final: false
+    jobs:
+    - AppSec Source Scanners
+
+- Linters and Tests:
+    manual: false
+    final: false
+    jobs:
+    - Linters and Tests
+
+#- SAST:
+#    manual: false
+#    final: false
+#    jobs:
+#    - SonarQube
+
+- Build and Push:
+    manual: false
+    final: false
+    jobs:
+      - Docker image
+
+- AppSec Images Scanners:
+    manual: false
+    final: false
+    jobs:
+      - AppSec Image Scanner
+
+Linters and Tests: !include 'build/linting-and-testing.yml'
+  
+Docker image: !include 'build/build.yml'
+
+AppSec Source Scanners: !include 'build/appsec-source-scanners.yml'
+
+AppSec Image Scanner: !include 'build/appsec-image-scanners.yml'
+
+#SonarQube: !include 'build/sonarqube.yml'
+
+repositories:
+- vfl:
+    scope: global
+- scanner:
+    scope: global
+triggers:
+- bitbucket-server-trigger:
+    repositories:
+    - vfl
+branches:
+  create: for-new-branch
+  delete:
+    after-deleted-days: 7
+    after-inactive-days: never
+  link-to-jira: true
+    
+
+labels: []
+dependencies:
+  require-all-stages-passing: false
+  enabled-for-branches: true
+  block-strategy: none
+  plans: []
+other:
+  concurrent-build-plugin: system-default
