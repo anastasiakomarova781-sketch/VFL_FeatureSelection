@@ -65,7 +65,7 @@ def main(args):
     active_features = [f.strip()
                        for f in args.active_features.split(",")] if args.active_features else []
     passive_features = [f.strip()
-                       for f in args.active_features.split(",")] if args.passive_features else []
+                       for f in args.passive_features.split(",")] if args.passive_features else []
 
 
     # rpc UploadActiveDataset(UploadActiveDatasetRequest) returns (WorkResponse);
