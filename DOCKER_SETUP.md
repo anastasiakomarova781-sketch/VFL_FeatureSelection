@@ -1,204 +1,75 @@
-# Инструкция по развертыванию в Docker
+# Docker Setup для VFL Feature Selection
 
-## 🐳 Быстрый старт
+## 🚀 Быстрый старт
 
 ### 1. Сборка образа
-
 ```bash
-# Вариант 1: Использование скрипта
-chmod +x docker_build.sh
-./docker_build.sh
-
-# Вариант 2: Прямая команда
-docker build -t vfl-feature-selection:latest .
+bash docker_build.sh
+```
+или
+```bash
+docker-compose build
 ```
 
 ### 2. Запуск контейнера
-
 ```bash
-# Вариант 1: Использование скрипта (интерактивный режим)
-chmod +x docker_run.sh
-./docker_run.sh
-
-# Вариант 2: Использование docker-compose
+bash docker_run.sh
+```
+или
+```bash
 docker-compose up -d
-docker-compose exec vfl-feature-selection /bin/bash
 ```
 
-### 3. Выполнение методов
-
-Внутри контейнера:
-
+### 3. Вход в контейнер
 ```bash
-# Метод PSO
-python3 PSO/pso_run.py
-
-# Метод FedSDG-FS
-python3 fedsdg/run_fedsdg_fs.py
-
-# Метод VF-PS
-python3 VF-PS/vf_ps_functions.py
+docker-compose exec vfl-feature-selection bash
 ```
 
-Или снаружи контейнера:
+## 📋 Использование
 
+### Запуск FedSDG-FS
 ```bash
-# Выполнение команд в контейнере
-chmod +x docker_exec.sh
-./docker_exec.sh python3 PSO/pso_run.py
-./docker_exec.sh python3 fedsdg/run_fedsdg_fs.py
+docker-compose exec vfl-feature-selection bash -c "cd /app && python3 fedsdg/run_fedsdg_fs.py"
 ```
 
----
-
-## 📋 Структура контейнера
-
-```
-/app
-├── Data/              # Монтируется как read-only
-├── PSO/               # Монтируется для разработки
-├── fedsdg/            # Монтируется для разработки
-├── VF-PS/             # Монтируется для разработки
-└── results/           # Результаты сохраняются здесь
+### Запуск PSO
+```bash
+docker-compose exec vfl-feature-selection bash -c "cd /app && python3 PSO/pso_run.py"
 ```
 
----
+### Запуск VF-PS
+```bash
+docker-compose exec vfl-feature-selection bash -c "cd /app && python3 VF-PS/vf_ps_functions.py"
+```
 
-## 🔧 Полезные команды
+## 📁 Структура в контейнере
+
+- `/app/Data/` - датасеты (read-only)
+- `/app/results/` - результаты (read-write)
+- `/app/fedsdg/` - метод FedSDG-FS
+- `/app/PSO/` - метод PSO
+- `/app/VF-PS/` - метод VF-PS
+
+## 🛠 Управление контейнером
+
+### Остановка
+```bash
+docker-compose stop
+```
+
+### Удаление
+```bash
+docker-compose down
+```
 
 ### Просмотр логов
 ```bash
-docker logs vfl-feature-selection
+docker-compose logs -f
 ```
 
-### Остановка контейнера
+## ✅ Проверка работы
+
+После запуска контейнера проверьте:
 ```bash
-docker stop vfl-feature-selection
+docker-compose exec vfl-feature-selection bash -c "python3 --version && pip list | grep -E '(numpy|pandas|sklearn|phe|xgboost)'"
 ```
-
-### Удаление контейнера
-```bash
-docker rm vfl-feature-selection
-```
-
-### Пересборка образа
-```bash
-docker build --no-cache -t vfl-feature-selection:latest .
-```
-
-### Просмотр запущенных контейнеров
-```bash
-docker ps
-```
-
-### Вход в контейнер
-```bash
-docker exec -it vfl-feature-selection /bin/bash
-```
-
----
-
-## 🚀 Примеры использования
-
-### Запуск метода PSO в контейнере
-
-```bash
-# Запуск контейнера
-./docker_run.sh
-
-# Внутри контейнера:
-python3 PSO/pso_run.py
-```
-
-### Запуск метода FedSDG-FS
-
-```bash
-# Извне контейнера:
-./docker_exec.sh python3 fedsdg/run_fedsdg_fs.py
-```
-
-### Разработка в контейнере
-
-```bash
-# Запуск контейнера
-docker-compose up -d
-
-# Вход в контейнер
-docker-compose exec vfl-feature-selection /bin/bash
-
-# Изменения в коде автоматически отображаются (благодаря volume)
-```
-
----
-
-## ⚙️ Настройка
-
-### Изменение портов (если нужно)
-
-В `docker-compose.yml` добавьте:
-```yaml
-ports:
-  - "8000:8000"
-```
-
-### Добавление переменных окружения
-
-В `docker-compose.yml`:
-```yaml
-environment:
-  - MY_VAR=value
-```
-
----
-
-## 🐛 Устранение проблем
-
-### Проблема: "Cannot connect to Docker daemon"
-**Решение:** Запустите Docker Desktop
-
-### Проблема: "Permission denied"
-**Решение:** Используйте `sudo` или добавьте пользователя в группу docker
-
-### Проблема: "No such file or directory"
-**Решение:** Убедитесь, что файлы скопированы в контейнер или смонтированы через volumes
-
-### Проблема: Изменения в коде не видны
-**Решение:** Используйте volumes для монтирования папок (уже настроено)
-
----
-
-## 📦 Что включено в образ
-
-- Python 3.11
-- Все зависимости из requirements.txt
-- XGBoost (для PSO-EVFFS)
-- Все методы отбора признаков:
-  - PSO (PSO_functions.py, PSO_functions_evffs.py)
-  - FedSDG-FS (fedsdg_fs_article.py)
-  - VF-PS (vf_ps_functions.py)
-
----
-
-## 🔄 Обновление
-
-Для обновления образа:
-
-```bash
-# Пересборка
-docker build --no-cache -t vfl-feature-selection:latest .
-
-# Перезапуск
-docker stop vfl-feature-selection
-docker rm vfl-feature-selection
-./docker_run.sh
-```
-
----
-
-## 📝 Примечания
-
-- Данные монтируются как read-only для безопасности
-- Результаты сохраняются в папку `results/` на хосте
-- Код монтируется для удобства разработки
-- Все изменения в коде сразу видны в контейнере
-

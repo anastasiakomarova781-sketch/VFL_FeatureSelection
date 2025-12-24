@@ -1,48 +1,41 @@
-####################################################
-# Dockerfile для VFL Feature Selection Project
-# Содержит методы: PSO, FedSDG-FS, VF-PS
-####################################################
-
 FROM python:3.11-slim
 
 # Установка системных зависимостей
-RUN apt update -y \
-    && apt upgrade -y \
-    && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install \
-        build-essential \
-        wget \
-        git \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    wget \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Установка pip и обновление
-RUN pip install --no-cache-dir --upgrade pip
-
-# Копирование requirements.txt и установка зависимостей
+# Установка рабочей директории
 WORKDIR /app
+
+# Копирование requirements и установка зависимостей
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Установка дополнительных зависимостей
-RUN pip install --no-cache-dir \
-    xgboost \
-    grpcio \
-    grpcio-tools \
-    ruamel.yaml
 
 # Копирование всего проекта
 COPY . .
 
-# Создание рабочей директории для результатов
+# Установка зависимостей ucbfl (без установки самого пакета, используем через PYTHONPATH)
+RUN if [ -d "vfl-master@73591d69c04-2/external/UCBFL/python" ]; then \
+    cd vfl-master@73591d69c04-2/external/UCBFL/python && \
+    pip install --no-cache-dir -r requirements.txt && \
+    cd /app; \
+    fi
+
+# Генерация proto файлов для VFL
+RUN if [ -d "vfl-master@73591d69c04-2" ]; then \
+    cd vfl-master@73591d69c04-2 && \
+    bash generate_proto.sh && \
+    cd /app; \
+    fi
+
+# Создание директории для результатов
 RUN mkdir -p /app/results
 
-# Установка переменных окружения
-ENV PYTHONPATH=/app:$PYTHONPATH
-ENV PYTHONUNBUFFERED=1
+# Установка PYTHONPATH для ucbfl и proto
+ENV PYTHONPATH=/app:/app/vfl-master@73591d69c04-2/python:/app/vfl-master@73591d69c04-2/example:/app/vfl-master@73591d69c04-2/external/UCBFL/python
 
-# Рабочая директория
-WORKDIR /app
-
-# По умолчанию запускаем интерактивную оболочку
+# Команда по умолчанию
 CMD ["/bin/bash"]
-

@@ -1,0 +1,11 @@
+**/__pycache__/
+build
+test/
+.conda
+.vscode
+**/.DS_Store
+rust/ucbfl_utils/Cargo.lock
+python/ucbfl/ucbfl.egg-info
+python/ucbfl.egg-info/
+ucbfl.egg-info
+dist
