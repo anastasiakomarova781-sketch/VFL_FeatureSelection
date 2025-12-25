@@ -46,3 +46,4 @@ kill \$PASSIVE_PID \$ACTIVE_PID 2>/dev/null || true
 echo 'Обучение завершено!'
 "
 
+

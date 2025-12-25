@@ -4,8 +4,9 @@ models_dir: "models"
 predict_dir: "predict"
 rabbitmq:
   route_file: "rabbitmq_route_table.yaml"
-  host: "localhost"
+  host: "rabbitmq"
   port: 5672
   port2: 15672
-  user: "rabbitmq_admin"
+  user: "rabbitmqadmin"
+  passport: "12345"
   max_message_size: 10485760

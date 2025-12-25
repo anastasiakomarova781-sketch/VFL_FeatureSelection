@@ -9,9 +9,31 @@ docker container stop  ucbvfl-server-training_active
 docker container remove ucbvfl-server-training_active
 docker container stop  ucbvfl-server-training_passive
 docker container remove ucbvfl-server-training_passive
+docker container stop  rabbitmq
+docker container remove rabbitmq
 
 docker network rm vflnet
 docker network create vflnet
+
+docker run -d \
+ --name rabbitmq \
+ --hostname rabbitmq \
+ --network vflnet \
+ -p 5672:5672 \
+ -p 15672:15672 rabbitmq:3-management
+
+sleep 10
+docker exec rabbitmq rabbitmqctl add_user rabbitmqadmin 12345
+docker exec rabbitmq rabbitmqctl set_user_tags rabbitmqadmin administrator
+
+
+sleep 10
+docker exec rabbitmq rabbitmqctl add_vhost arbiter
+docker exec rabbitmq rabbitmqctl add_vhost guest
+docker exec rabbitmq rabbitmqctl add_vhost host
+docker exec rabbitmq rabbitmqctl set_permissions -p arbiter rabbitmqadmin ".*" ".*" ".*"
+docker exec rabbitmq rabbitmqctl set_permissions -p guest rabbitmqadmin ".*" ".*" ".*"
+docker exec rabbitmq rabbitmqctl set_permissions -p host rabbitmqadmin ".*" ".*" ".*"
 
 
 # Training Servers (50000/50001)

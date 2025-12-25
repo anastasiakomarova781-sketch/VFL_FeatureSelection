@@ -1,7 +1,7 @@
 route_table:
   arbiter:
-    default: [rabbitmq@localhost, 5672]
+    default: [rabbitmq@rabbitmq, 5672]
   guest:
-    default: [rabbitmq@localhost, 5672]
+    default: [rabbitmq@rabbitmq, 5672]
   host:
-    default: [rabbitmq@localhost, 5672]
+    default: [rabbitmq@rabbitmq, 5672]
